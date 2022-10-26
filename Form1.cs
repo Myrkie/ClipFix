@@ -70,7 +70,6 @@ namespace ClipFix
                     Image img = Image.FromStream(ms);
                     try
                     {
-                        Clipboard.Clear();
                         Clipboard.SetImage(img);
                     }
                     catch (Exception)
