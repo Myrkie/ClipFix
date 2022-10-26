@@ -118,6 +118,7 @@
             this.tbDebug.Name = "tbDebug";
             this.tbDebug.Size = new System.Drawing.Size(261, 183);
             this.tbDebug.TabIndex = 0;
+            this.tbDebug.ReadOnly = true;
             // 
             // notifyIcon1
             // 

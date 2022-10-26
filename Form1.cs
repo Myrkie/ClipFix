@@ -5,6 +5,7 @@ using WK.Libraries.SharpClipboardNS;
 using static WK.Libraries.SharpClipboardNS.SharpClipboard;
 using Microsoft.Win32;
 using System.Text;
+using System.Runtime.InteropServices;
 
 namespace ClipFix
 {
@@ -12,6 +13,7 @@ namespace ClipFix
     {
         private SharpClipboard clipboard;
         private Config? config;
+        private const string VALID_EXTENSIONS = ".jpg.jpeg.png.gif.webp.jfif.jifi";
         public static Form1 Instance { get; private set; }
 
         public Form1()
@@ -47,7 +49,9 @@ namespace ClipFix
 
         private void ClipboardChanged(object? sender, ClipboardChangedEventArgs e)
         {
-            if (e.ContentType == ContentTypes.Files && e.SourceApplication.Name == "firefox.exe" & (Path.GetExtension(clipboard.ClipboardFile) == ".png" || Path.GetExtension(clipboard.ClipboardFile) == ".jpg"))
+            var extension = Path.GetExtension(clipboard.ClipboardFile).ToLower();
+
+            if (e.ContentType == ContentTypes.Files && e.SourceApplication.Name == "firefox.exe" & VALID_EXTENSIONS.Contains(extension))
             {
                 StringBuilder sb = new StringBuilder();
                 sb.AppendLine(new string('-', 35));
@@ -55,20 +59,47 @@ namespace ClipFix
                 sb.AppendLine("FireFox Title: " + e.SourceApplication.Title);
                 sb.AppendLine("Date: " + DateTime.Now);
                 sb.AppendLine(new string('-', 35));
-                tbDebug.Text += sb.ToString() + Environment.NewLine;
+                tbDebug.AppendText(sb.ToString() + Environment.NewLine);
                 if(config.EnableDebugNotification)
                     notifyIcon1.ShowBalloonTip(2000,"Clipy Fix", "Converted Image from tab \"" + e.SourceApplication.Title + "\" to one image", ToolTipIcon.Info);
-                byte[] bytes = File.ReadAllBytes(clipboard.ClipboardFile);
-                using (var ms = new MemoryStream(bytes))
+                string? activeWindow = GetActiveWindowTitle();
+                if (activeWindow != null && activeWindow.ToLower().Contains("firefox"))
                 {
+                    byte[] bytes = File.ReadAllBytes(clipboard.ClipboardFile);
+                    using var ms = new MemoryStream(bytes);
                     Image img = Image.FromStream(ms);
-                    Clipboard.Clear();
-                    Clipboard.SetImage(img);
+                    try
+                    {
+                        Clipboard.Clear();
+                        Clipboard.SetImage(img);
+                    }
+                    catch (Exception)
+                    {
+                        tbDebug.AppendText("Clipboard Busy please wait!" + Environment.NewLine);
+                    }
                 }
             }
         }
 
-        
+        [DllImport("user32.dll")]
+        static extern IntPtr GetForegroundWindow();
+
+        [DllImport("user32.dll")]
+        static extern int GetWindowText(IntPtr hWnd, StringBuilder text, int count);
+
+        // https://stackoverflow.com/questions/25571134
+        private string? GetActiveWindowTitle()
+        {
+            const int nChars = 256;
+            StringBuilder Buff = new StringBuilder(nChars);
+            IntPtr handle = GetForegroundWindow();
+
+            if (GetWindowText(handle, Buff, nChars) > 0)
+            {
+                return Buff.ToString();
+            }
+            return null;
+        }
 
         private void Form1_Resize(object sender, EventArgs e)
         {
