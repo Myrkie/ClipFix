@@ -67,9 +67,9 @@ namespace ClipFix
                 {
                     byte[] bytes = File.ReadAllBytes(clipboard.ClipboardFile);
                     using var ms = new MemoryStream(bytes);
-                    Image img = Image.FromStream(ms);
                     try
                     {
+                        Image img = Image.FromStream(ms);
                         Clipboard.SetImage(img);
                     }
                     catch (Exception)
