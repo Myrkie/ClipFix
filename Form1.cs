@@ -5,7 +5,6 @@ using WK.Libraries.SharpClipboardNS;
 using static WK.Libraries.SharpClipboardNS.SharpClipboard;
 using Microsoft.Win32;
 using System.Text;
-using System.Runtime.InteropServices;
 
 namespace ClipFix
 {
@@ -53,7 +52,7 @@ namespace ClipFix
 
             if (e.ContentType == ContentTypes.Files && e.SourceApplication.Name == "firefox.exe" & VALID_EXTENSIONS.Contains(extension))
             {
-                StringBuilder sb = new StringBuilder();
+                StringBuilder sb = new();
                 sb.AppendLine(new string('-', 35));
                 sb.AppendLine("File: " + Path.GetFileName(clipboard.ClipboardFile));
                 sb.AppendLine("FireFox Title: " + e.SourceApplication.Title);
@@ -62,42 +61,18 @@ namespace ClipFix
                 tbDebug.AppendText(sb.ToString() + Environment.NewLine);
                 if(config.EnableDebugNotification)
                     notifyIcon1.ShowBalloonTip(2000,"Clipy Fix", "Converted Image from tab \"" + e.SourceApplication.Title + "\" to one image", ToolTipIcon.Info);
-                string? activeWindow = GetActiveWindowTitle();
-                if (activeWindow != null && activeWindow.ToLower().Contains("firefox"))
+                byte[] bytes = File.ReadAllBytes(clipboard.ClipboardFile);
+                using var ms = new MemoryStream(bytes);
+                try
                 {
-                    byte[] bytes = File.ReadAllBytes(clipboard.ClipboardFile);
-                    using var ms = new MemoryStream(bytes);
-                    try
-                    {
-                        Image img = Image.FromStream(ms);
-                        Clipboard.SetImage(img);
-                    }
-                    catch (Exception)
-                    {
-                        tbDebug.AppendText("Clipboard Busy please wait!" + Environment.NewLine);
-                    }
+                    Image img = Image.FromStream(ms);
+                    Clipboard.SetImage(img);
+                }
+                catch (Exception)
+                {
+                    tbDebug.AppendText("Clipboard Busy please wait!" + Environment.NewLine);
                 }
             }
-        }
-
-        [DllImport("user32.dll")]
-        static extern IntPtr GetForegroundWindow();
-
-        [DllImport("user32.dll")]
-        static extern int GetWindowText(IntPtr hWnd, StringBuilder text, int count);
-
-        // https://stackoverflow.com/questions/25571134
-        private string? GetActiveWindowTitle()
-        {
-            const int nChars = 256;
-            StringBuilder Buff = new StringBuilder(nChars);
-            IntPtr handle = GetForegroundWindow();
-
-            if (GetWindowText(handle, Buff, nChars) > 0)
-            {
-                return Buff.ToString();
-            }
-            return null;
         }
 
         private void Form1_Resize(object sender, EventArgs e)
